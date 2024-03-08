@@ -1,21 +1,25 @@
 # Build the manager binary
 FROM pytorch/pytorch:1.11.0-cuda11.3-cudnn8-runtime
 
+RUN apt update -y || true
+RUN apt install curl -y || true
+
 WORKDIR /test
 
 # Install MNIST requirements
-COPY mnist_pip_requirements.txt requirements.txt
-RUN pip install --requirement requirements.txt
+RUN pip install requests pip_system_certs
 
 # Prepare MNIST script
 COPY mnist.py mnist.py
-COPY download_dataset.py download_dataset.py
-RUN torchrun download_dataset.py
+
+RUN mkdir -p /usr/local/share/ca-certificates/certs
 
 # Allow root group to access test folder
 RUN chgrp -R 0 /test && \
     chmod -R g+rwX /test
 
-USER 65532:0
 COPY entrypoint.sh entrypoint.sh
-ENTRYPOINT ["/test/entrypoint.sh"]
+
+RUN ["chmod", "+x", "/test/entrypoint.sh"]
+
+ENTRYPOINT ["/bin/sh", "-c", "/test/entrypoint.sh"]
